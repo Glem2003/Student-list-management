@@ -2,11 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const db = require('./module/db');
 
+require('dotenv').config();
+
 const app = express();
 
 // middleware
 app.use(cors());
 app.use(express.json());
+const apiKeyMiddleware = require('./middleware/apiKeyMiddleware');
 
 app.get('/students', (req, res) => {
     db.select('*')
@@ -38,7 +41,7 @@ app.get('/students/:id', (req, res) => {
         })
 })
 
-app.post('/students', async (req, res) => {
+app.post('/students', apiKeyMiddleware, async (req, res) => {
     const { student_id, student_name, student_age, student_gender, student_grade, student_class } = req.body;
 
     try {
@@ -65,7 +68,7 @@ app.post('/students', async (req, res) => {
     }
 })
 
-app.put('/students/:id', async (req, res) => {
+app.put('/students/:id', apiKeyMiddleware, async (req, res) => {
     const { id } = req.params
     const updatedData = req.body
 
@@ -85,7 +88,7 @@ app.put('/students/:id', async (req, res) => {
     }
 })
 
-app.delete('/students/:id', async (req, res) => {
+app.delete('/students/:id', apiKeyMiddleware, async (req, res) => {
     const { id } = req.params;
 
     try {
