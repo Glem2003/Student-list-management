@@ -42,7 +42,7 @@ app.post('/students', async (req, res) => {
     const { student_id, student_name, student_age, student_gender, student_grade, student_class } = req.body;
 
     try {
-        const existingStudent = (await db('students').where({ student_id })).first()
+        const existingStudent = await db('students').where({ student_id }).first()
         if (existingStudent) {
             return res.status(400).json({ message: 'Student already exists' })
         }
