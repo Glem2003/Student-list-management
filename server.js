@@ -1,13 +1,23 @@
 const express = require("express");
+const cors = require("cors");
 const db = require('./module/db');
 
 const app = express();
+
+// middleware
+app.use(cors());
 app.use(express.json());
 
 app.get('/students', (req, res) => {
-    db.select('*').from('students').then(data => {
-        res.status(200).json(data)
-    })
+    db.select('*')
+        .from('students')
+        .then(data => {
+            res.status(200).json(data)
+        })
+        .catch(err => {
+            console.log(err)
+            res.status(500).json({ message: 'Server error' })
+        })
 })
 
 app.get('/students/:id', (req, res) => {
@@ -18,44 +28,78 @@ app.get('/students/:id', (req, res) => {
         .where({ student_id: id })
         .then(data => {
             if (data.length > 0) {
-                res.status(200).json({ message: 'success', data: data })
+                return res.status(200).json({ message: 'success', data: data })
             } else {
-                res.status(404).json({ message: 'Student not found' })
+                return res.status(404).json({ message: 'Student not found' })
             }
         })
         .catch(err => {
-            res.status(500).json({ message: 'Server error' })
+            return res.status(500).json({ message: 'Server error' })
         })
 })
 
-app.post('/students', (req, res) => {
+app.post('/students', async (req, res) => {
     const { student_id, student_name, student_age, student_gender, student_grade, student_class } = req.body;
 
-    db('students').where({ student_id }).first()
-        .then(existingStudent => {
-            if (existingStudent) {
-                res.status(400).json({ message: 'Student already exists' })
-            }
+    try {
+        const existingStudent = (await db('students').where({ student_id })).first()
+        if (existingStudent) {
+            return res.status(400).json({ message: 'Student already exists' })
+        }
 
-            return db('students').insert({
-                student_id,
-                student_name,
-                student_age,
-                student_gender,
-                student_grade,
-                student_class
-            })
-                .then(() => {
-                    return db('students').where({ student_id }).first()
-                })
-                .then(data => {
-                    res.status(201).json({ message: 'success', data: data })
-                })
-                .catch(err => {
-                    console.log(err);
-                    res.status(500).json({ message: 'Server error' })
-                })
-        })
+        await db('students').insert({
+            student_id,
+            student_name,
+            student_age,
+            student_gender,
+            student_grade,
+            student_class
+        });
+
+        const newStudent = await db('students').where({ student_id }).first();
+        res.status(201).json({ message: 'success', data: newStudent });
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: 'Server error' })
+    }
+})
+
+app.put('/students/:id', async (req, res) => {
+    const { id } = req.params
+    const updatedData = req.body
+
+    try {
+        const existingStudent = await db('students').where({ student_id: id }).first();
+        if (!existingStudent) {
+            return res.status(404).json({ message: 'Student not found' })
+        }
+
+        await db('students').where({ student_id: id }).update(updatedData);
+
+        const updatedStudent = await db('students').where({ student_id: id }).first();
+        res.status(200).json({ message: 'success', data: updatedStudent });
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: 'Server error' })
+    }
+})
+
+app.delete('/students/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const existingStudent = await db('students').where({ student_id: id }).first();
+        if (!existingStudent) {
+            return res.status(404).json({ message: 'Student not found' })
+        }
+
+        await db('students').where({ student_id: id }).del();
+        res.status(200).json({ message: 'success' });
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: 'Server error' })
+    }
 })
 
 const PORT = 3000;
